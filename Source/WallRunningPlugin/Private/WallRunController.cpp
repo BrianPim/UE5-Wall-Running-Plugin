@@ -83,10 +83,12 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 	FVector TargetLocation = ModifiedImpactPosition + ImpactNormal * DistanceToWallDuringRun;
 	FRotator TargetRotation = FRotationMatrix::MakeFromXZ(WallTangent, FVector::UpVector).Rotator();
 
+	PreviousGravityScale = MovementComponent->GravityScale;
+	
 	MovementComponent->StopMovementImmediately();
 	PlayerController->SetIgnoreMoveInput(true);
-	MovementComponent->SetMovementMode(MOVE_Flying);
-	MovementComponent->GravityScale = 0.0f;
+	//MovementComponent->SetMovementMode(MOVE_Flying);
+	MovementComponent->GravityScale = WallRunGravityScale;
 	
 	PlayerCharacter->SetActorLocationAndRotation(
 	TargetLocation,
@@ -94,6 +96,10 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 	false,
 	nullptr,
 	ETeleportType::TeleportPhysics);
+
+	//TODO Have two timers: one for running straight (Gravity Scale == 0), another for when we should start to fall (Gravity Scale > 0).
+	GetWorld()->GetTimerManager().SetTimer(EndWallRunTimerHandle, this, &UWallRunController::CancelWallRun,
+											WallRunDuration, false);
 }
 
 void UWallRunController::CancelWallRun()
@@ -103,7 +109,11 @@ void UWallRunController::CancelWallRun()
 		return;
 	}
 
-	IsWallRunning = false;
+	//TODO Need to fix this so that we can set back to false without getting stuck on the wall.
+	//IsWallRunning = false;
+
+	PlayerController->SetIgnoreMoveInput(false);
+	MovementComponent->GravityScale = PreviousGravityScale;
 }
 
 void UWallRunController::OnWallHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,

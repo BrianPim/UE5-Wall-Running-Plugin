@@ -40,7 +40,17 @@ protected:
 private:
 
 	//Defaults
+	static constexpr float BaseWallRunDuration = 1.5f;
+	static constexpr float BaseWallRunGravityScale = 0.1f;
 	static constexpr float BaseDistanceToWallDuringRun = 32.0f;
+
+	//How long to Wall Run for before falling. Set to <= 0 to Wall Run indefinitely.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
+	float WallRunDuration = BaseWallRunDuration;
+
+	//Gravity Scale during the wall run. Set to 0 to remain at the same Z coordinate the entire time.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
+	float WallRunGravityScale = BaseWallRunGravityScale;
 
 	//How far the Player Character is positioned from the wall during Wall Run. Recommended to make this the radius of
 	//your Player Character's Capsule Component.
@@ -67,4 +77,8 @@ private:
 	FCollisionQueryParams WallRunCollisionQueryParams;
 
 	bool IsWallRunning = false;
+
+	float PreviousGravityScale = 0;
+	
+	FTimerHandle EndWallRunTimerHandle;
 };
