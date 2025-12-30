@@ -33,11 +33,19 @@ protected:
 	//Initial Wall Running Setup.
 	void SetupWallRunning();
 	
-	void StartWallRun();
+	void StartWallRun(FVector ImpactPosition, FVector ImpactNormal);
 
 	void CancelWallRun();
 
 private:
+
+	//Defaults
+	static constexpr float BaseDistanceToWallDuringRun = 32.0f;
+
+	//How far the Player Character is positioned from the wall during Wall Run. Recommended to make this the radius of
+	//your Player Character's Capsule Component.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
+	float DistanceToWallDuringRun = BaseDistanceToWallDuringRun;
 
 	//Used to store a reference to the Player's PlayerController.
 	UPROPERTY()
@@ -57,4 +65,6 @@ private:
 	
 	//CollisionQueryParams that determine valid objects to consider in valid Wall Run target determination.
 	FCollisionQueryParams WallRunCollisionQueryParams;
+
+	bool IsWallRunning = false;
 };
