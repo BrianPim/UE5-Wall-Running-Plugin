@@ -73,11 +73,6 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
 	float GravityScale = BaseGravityScale;
 
-	//How far the Player Character is positioned from the wall during Wall Run. Recommended to make this the radius of
-	//your Player Character's Capsule Component.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
-	float DistanceToWallDuringRun = BaseDistanceToWallDuringRun;
-
 	UPROPERTY()
 	TObjectPtr<APlayerController> PlayerController = nullptr;
 
@@ -100,12 +95,16 @@ private:
 	
 	FVector WallRunDirection = FVector::ZeroVector;
 	FVector WallRunNormal = FVector::ZeroVector;
+	
 	bool WallIsOnTheRight = false;
-
 	bool IsWallRunning = false;
+	
 	float PreviousGravityScale = 0.0f;
 	float PreviousAirControl = 0.0f;
 	float PreviousMaxAcceleration = 0.0f;
 	float PreviousBrakingDecelerationFalling = 0.0f;
 	float PreviousBrakingFrictionFactor = 0.0f;
+	
+	//How far the Player Character is positioned from the wall during Wall Run.
+	float DistanceToWallDuringRun = 32;
 };

@@ -90,6 +90,8 @@ void UWallRunController::SetupWallRunning()
 	}
 
 	WallCollisionQueryParams.AddIgnoredActor(PlayerCharacter);
+
+	DistanceToWallDuringRun = PlayerCharacter->GetCapsuleComponent()->GetScaledCapsuleRadius();
 }
 
 void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNormal)
