@@ -52,9 +52,9 @@ private:
 
 	//Defaults
 	static constexpr float BaseSpeed = 300.0f;
-	static constexpr float BaseDuration = 1.5f;
+	static constexpr float BaseDuration = 1.0f;
 	static constexpr float BaseEnableGravityAfter = 0.5f;
-	static constexpr float BaseGravityScale = 0.1f;
+	static constexpr float BaseGravityScale = 0.5f;
 	static constexpr float BaseDistanceToWallDuringRun = 32.0f;
 
 	//Player Character's velocity while Wall Running.
