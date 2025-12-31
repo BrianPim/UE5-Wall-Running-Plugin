@@ -9,14 +9,12 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
 UWallRunController::UWallRunController()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 }
 
 
@@ -42,26 +40,46 @@ void UWallRunController::TickComponent(float DeltaTime, ELevelTick TickType,
 		}
 		else
 		{
-			//TODO Look into using impulses instead. Need to combine this with the effects of gravity.
-			//Setting the velocity of the Player's MoveComponent.
-			MovementComponent->Velocity = WallRunDirection * WallRunSpeed;
+			PlayerCharacter->AddMovementInput(WallRunDirection, 1.0f);
+
+			if (!WallRunNormal.IsNearlyZero())
+			{
+				MovementComponent->AddForce(-WallRunNormal * 60000.0f);
+			}
+
+			FVector CurrentVelocity = MovementComponent->Velocity;
+			float Speed2D = FVector(CurrentVelocity.X, CurrentVelocity.Y, 0.0f).Size();
+
+			if (Speed2D > Speed && Speed2D > KINDA_SMALL_NUMBER)
+			{
+				FVector Clamped2D = FVector(CurrentVelocity.X, CurrentVelocity.Y, 0.0f).GetSafeNormal() * Speed;
+				CurrentVelocity.X = Clamped2D.X;
+				CurrentVelocity.Y = Clamped2D.Y;
+				MovementComponent->Velocity = CurrentVelocity;
+			}
 		}
 	}
 }
 
 void UWallRunController::SetupWallRunning()
 {
-	PlayerCharacter = Cast<ACharacter>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
-	checkf(PlayerCharacter, TEXT("Unable to get reference to the Local Player's Character"));
+	PlayerCharacter = Cast<ACharacter>(GetOwner());
+	checkf(PlayerCharacter, TEXT("Unable to get reference to the Player's Character"));
 
 	PlayerController = Cast<APlayerController>(PlayerCharacter->GetController());
-	checkf(PlayerController, TEXT("Unable to get reference to the Local Player's PlayerController"));
+	checkf(PlayerController, TEXT("Unable to get reference to the Player's PlayerController"));
 
 	MovementComponent = PlayerCharacter->GetCharacterMovement();
 	checkf(MovementComponent, TEXT("Unable to get reference to the Player Character's CharacterMovementComponent"));
 
+	MovementComponent->AddTickPrerequisiteComponent(this);
+
 	ColliderComponent = PlayerCharacter->GetCapsuleComponent();
 	checkf(ColliderComponent, TEXT("Unable to get reference to the Player Character's CapsuleComponent"));
+	
+	ColliderComponent->OnComponentHit.AddDynamic(
+		this,
+		&UWallRunController::OnWallHit);
 
 	EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent);
 	checkf(EnhancedInputComponent, TEXT("Unable to get reference to the EnhancedInputComponent"));
@@ -70,10 +88,6 @@ void UWallRunController::SetupWallRunning()
 	{
 		EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Triggered, this, &UWallRunController::CancelWallRun);
 	}
-
-	ColliderComponent->OnComponentHit.AddDynamic(
-		this,
-		&UWallRunController::OnWallHit);
 
 	WallCollisionQueryParams.AddIgnoredActor(PlayerCharacter);
 }
@@ -100,17 +114,27 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 	WallIsOnTheRight = SideSign >= 0.0f;
 
 	//Caching WallTangent so we know which direction to move in during Wall Running.
-	WallRunDirection = WallTangent;
+	WallRunDirection = FVector(WallTangent.X, WallTangent.Y, 0.0f).GetSafeNormal();
+	WallRunNormal = FVector(ImpactNormal.X, ImpactNormal.Y, 0.0f).GetSafeNormal();
 	
 	FVector ModifiedImpactPosition = FVector(ImpactPosition.X, ImpactPosition.Y, PlayerCharacter->GetActorLocation().Z);
 	FVector TargetLocation = ModifiedImpactPosition + ImpactNormal * DistanceToWallDuringRun;
 	FRotator TargetRotation = FRotationMatrix::MakeFromXZ(WallTangent, FVector::UpVector).Rotator();
 	
 	PreviousGravityScale = MovementComponent->GravityScale;
+	PreviousAirControl = MovementComponent->AirControl;
+	PreviousMaxAcceleration = MovementComponent->MaxAcceleration;
+	PreviousBrakingDecelerationFalling = MovementComponent->BrakingDecelerationFalling;
+	PreviousBrakingFrictionFactor = MovementComponent->BrakingFrictionFactor;
 	
 	MovementComponent->StopMovementImmediately();
 	PlayerController->SetIgnoreMoveInput(true);
-	MovementComponent->GravityScale = WallRunGravityScale;
+
+	MovementComponent->GravityScale = EnableGravityAfter > 0.0f ? 0.0f : GravityScale;
+	MovementComponent->AirControl = 1.0f;
+	MovementComponent->MaxAcceleration = 20000.0f;
+	MovementComponent->BrakingDecelerationFalling = 0.0f;
+	MovementComponent->BrakingFrictionFactor = 0.0f;
 	
 	PlayerCharacter->SetActorLocationAndRotation(
 	TargetLocation,
@@ -119,9 +143,22 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 	nullptr,
 	ETeleportType::TeleportPhysics);
 
-	//TODO Have two timers: one for running straight (Gravity Scale == 0), another for when we should start to fall (Gravity Scale > 0).
-	GetWorld()->GetTimerManager().SetTimer(EndWallRunTimerHandle, this, &UWallRunController::CancelWallRun,
-											WallRunDuration, false);
+	FVector V = MovementComponent->Velocity;
+	V.X = WallRunDirection.X * Speed;
+	V.Y = WallRunDirection.Y * Speed;
+	MovementComponent->Velocity = V;
+
+	if (Duration > 0.0f)
+	{
+		GetWorld()->GetTimerManager().SetTimer(EndWallRunTimerHandle, this, &UWallRunController::CancelWallRun,
+											Duration, false);
+	}
+
+	if (EnableGravityAfter > 0.0f)
+	{
+		GetWorld()->GetTimerManager().SetTimer(EnableGravityTimerHandle, this, &UWallRunController::EnableGravity,
+											EnableGravityAfter, false);
+	}
 
 	IsWallRunning = true;
 }
@@ -133,15 +170,39 @@ void UWallRunController::CancelWallRun()
 		return;
 	}
 
-	GetWorld()->GetTimerManager().ClearTimer(EndWallRunTimerHandle);
+	if (Duration > 0.0f)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(EndWallRunTimerHandle);
+	}
 
 	IsWallRunning = false;
 
 	PlayerController->SetIgnoreMoveInput(false);
+
 	MovementComponent->GravityScale = PreviousGravityScale;
+	MovementComponent->AirControl = PreviousAirControl;
+	MovementComponent->MaxAcceleration = PreviousMaxAcceleration;
+	MovementComponent->BrakingDecelerationFalling = PreviousBrakingDecelerationFalling;
+	MovementComponent->BrakingFrictionFactor = PreviousBrakingFrictionFactor;
 }
 
-bool UWallRunController::WallFound() const
+void UWallRunController::EnableGravity()
+{
+	if (EnableGravityAfter > 0.0f)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(EnableGravityTimerHandle);
+	}
+	
+	if (!IsWallRunning)
+	{
+		return;
+	}
+	
+	UE_LOG(WallRunningLog, Warning, TEXT("Enable Gravity"));
+	MovementComponent->GravityScale = GravityScale;
+}
+
+bool UWallRunController::WallFound()
 {
 	FHitResult HitResult;
 
@@ -158,6 +219,7 @@ bool UWallRunController::WallFound() const
 	
 	if (Hit && HitResult.GetActor()->ActorHasTag(TAG_WallRun.GetTag().GetTagName()))
 	{
+		WallRunNormal = FVector(HitResult.ImpactNormal.X, HitResult.ImpactNormal.Y, 0.0f).GetSafeNormal();
 		return true;
 	}
 	
@@ -173,4 +235,3 @@ void UWallRunController::OnWallHit(UPrimitiveComponent* HitComponent, AActor* Ot
 		StartWallRun(Hit.ImpactPoint, Hit.ImpactNormal);
 	}
 }
-

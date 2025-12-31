@@ -9,6 +9,7 @@
 class UCapsuleComponent;
 class UCharacterMovementComponent;
 class UInputAction;
+class UEnhancedInputComponent;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class WALLRUNNINGPLUGIN_API UWallRunController : public UActorComponent
@@ -42,62 +43,69 @@ protected:
 
 	void CancelWallRun();
 
+	void EnableGravity();
+
 	//Checks if the Player still has a wall to run along.
-	bool WallFound() const;
+	bool WallFound();
 
 private:
 
 	//Defaults
-	static constexpr float BaseWallRunSpeed = 300.0f;
-	static constexpr float BaseWallRunDuration = 1.5f;
-	static constexpr float BaseWallRunGravityScale = 0.1f;
+	static constexpr float BaseSpeed = 300.0f;
+	static constexpr float BaseDuration = 1.5f;
+	static constexpr float BaseEnableGravityAfter = 0.5f;
+	static constexpr float BaseGravityScale = 0.1f;
 	static constexpr float BaseDistanceToWallDuringRun = 32.0f;
 
 	//Player Character's velocity while Wall Running.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
-	float WallRunSpeed = BaseWallRunSpeed;
+	float Speed = BaseSpeed;
 
-	//How long to Wall Run for before falling. Set to <= 0 to Wall Run indefinitely.
+	//How long to Wall Run for. Set to <= 0 to Wall Run indefinitely.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
-	float WallRunDuration = BaseWallRunDuration;
+	float Duration = BaseDuration;
+
+	//How long to Wall Run for before gravity begins to kick in. Set to <= 0 to immediately be affected by Gravity.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
+	float EnableGravityAfter = BaseEnableGravityAfter;
 
 	//Gravity Scale during the wall run. Set to 0 to remain at the same Z coordinate the entire time.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
-	float WallRunGravityScale = BaseWallRunGravityScale;
+	float GravityScale = BaseGravityScale;
 
 	//How far the Player Character is positioned from the wall during Wall Run. Recommended to make this the radius of
 	//your Player Character's Capsule Component.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
 	float DistanceToWallDuringRun = BaseDistanceToWallDuringRun;
 
-	//Used to store a reference to the Player's PlayerController.
 	UPROPERTY()
 	TObjectPtr<APlayerController> PlayerController = nullptr;
 
-	//Used to store a reference to the Character we are controlling.
 	UPROPERTY()
 	TObjectPtr<ACharacter> PlayerCharacter = nullptr;
 	
-	//Used to store a reference to the Player Character's MoveComponent.
 	UPROPERTY()
 	TObjectPtr<UCharacterMovementComponent> MovementComponent = nullptr;
 
-	//Used to store a reference to the player's collision component, used for tracking Hit events.
 	UPROPERTY()
 	TObjectPtr<UCapsuleComponent> ColliderComponent = nullptr;
 	
-	//Used to store a reference to the InputComponent cast to an EnhancedInputComponent
 	UPROPERTY()
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent = nullptr;
 	
 	FTimerHandle EndWallRunTimerHandle;
+	FTimerHandle EnableGravityTimerHandle;
 
-	//CollisionQueryParams that determine valid objects to consider during Wall Run cancel check.
 	FCollisionQueryParams WallCollisionQueryParams;
 	
 	FVector WallRunDirection = FVector::ZeroVector;
+	FVector WallRunNormal = FVector::ZeroVector;
 	bool WallIsOnTheRight = false;
 
 	bool IsWallRunning = false;
-	float PreviousGravityScale = 0;
+	float PreviousGravityScale = 0.0f;
+	float PreviousAirControl = 0.0f;
+	float PreviousMaxAcceleration = 0.0f;
+	float PreviousBrakingDecelerationFalling = 0.0f;
+	float PreviousBrakingFrictionFactor = 0.0f;
 };
