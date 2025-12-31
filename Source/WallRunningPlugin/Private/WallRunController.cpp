@@ -38,7 +38,7 @@ void UWallRunController::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		if (MovementComponent->MovementMode != MOVE_Falling)
 		{
-			//CancelWallRun();
+			CancelWallRun();
 		}
 	}
 }
@@ -133,7 +133,7 @@ void UWallRunController::OnWallHit(UPrimitiveComponent* HitComponent, AActor* Ot
 	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	//Only start Wall Running if we aren't already AND if the actor collided is tagged.
-	if (!IsWallRunning && OtherActor->ActorHasTag(TAG_WallRun.GetTag().GetTagName()))
+	if (!IsWallRunning && MovementComponent->IsFalling() && OtherActor->ActorHasTag(TAG_WallRun.GetTag().GetTagName()))
 	{
 		StartWallRun(Hit.ImpactPoint, Hit.ImpactNormal);
 	}
