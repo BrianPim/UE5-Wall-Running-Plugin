@@ -42,6 +42,9 @@ protected:
 
 	void CancelWallRun();
 
+	//Checks if the Player still has a wall to run along.
+	bool WallFound() const;
+
 private:
 
 	//Defaults
@@ -82,14 +85,19 @@ private:
 	//Used to store a reference to the player's collision component, used for tracking Hit events.
 	UPROPERTY()
 	TObjectPtr<UCapsuleComponent> ColliderComponent = nullptr;
+	
 	//Used to store a reference to the InputComponent cast to an EnhancedInputComponent
 	UPROPERTY()
 	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent = nullptr;
-
-	bool IsWallRunning = false;
-
-	float PreviousGravityScale = 0;
 	
 	FTimerHandle EndWallRunTimerHandle;
+
+	//CollisionQueryParams that determine valid objects to consider during Wall Run cancel check.
+	FCollisionQueryParams WallCollisionQueryParams;
+	
 	FVector WallRunDirection = FVector::ZeroVector;
+	bool WallIsOnTheRight = false;
+
+	bool IsWallRunning = false;
+	float PreviousGravityScale = 0;
 };

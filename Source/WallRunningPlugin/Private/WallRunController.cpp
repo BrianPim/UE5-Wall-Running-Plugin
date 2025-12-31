@@ -36,12 +36,13 @@ void UWallRunController::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (IsWallRunning)
 	{
-		if (MovementComponent->MovementMode != MOVE_Falling)
+		if (MovementComponent->MovementMode != MOVE_Falling || !WallFound())
 		{
 			CancelWallRun();
 		}
 		else
 		{
+			//TODO Look into using impulses instead. Need to combine this with the effects of gravity.
 			//Setting the velocity of the Player's MoveComponent.
 			MovementComponent->Velocity = WallRunDirection * WallRunSpeed;
 		}
@@ -73,6 +74,8 @@ void UWallRunController::SetupWallRunning()
 	ColliderComponent->OnComponentHit.AddDynamic(
 		this,
 		&UWallRunController::OnWallHit);
+
+	WallCollisionQueryParams.AddIgnoredActor(PlayerCharacter);
 }
 
 void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNormal)
@@ -94,13 +97,15 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 		WallTangent *= -1.0f;
 	}
 
+	WallIsOnTheRight = SideSign >= 0.0f;
+
 	//Caching WallTangent so we know which direction to move in during Wall Running.
 	WallRunDirection = WallTangent;
-
+	
 	FVector ModifiedImpactPosition = FVector(ImpactPosition.X, ImpactPosition.Y, PlayerCharacter->GetActorLocation().Z);
 	FVector TargetLocation = ModifiedImpactPosition + ImpactNormal * DistanceToWallDuringRun;
 	FRotator TargetRotation = FRotationMatrix::MakeFromXZ(WallTangent, FVector::UpVector).Rotator();
-
+	
 	PreviousGravityScale = MovementComponent->GravityScale;
 	
 	MovementComponent->StopMovementImmediately();
@@ -136,8 +141,31 @@ void UWallRunController::CancelWallRun()
 	MovementComponent->GravityScale = PreviousGravityScale;
 }
 
+bool UWallRunController::WallFound() const
+{
+	FHitResult HitResult;
+
+	FVector CastStart = PlayerCharacter->GetActorLocation();
+	FVector CastEnd = CastStart + PlayerCharacter->GetActorRightVector() * (WallIsOnTheRight ? 1 : -1) * DistanceToWallDuringRun * 1.1f;
+
+	bool Hit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		CastStart,
+		CastEnd,
+		ECC_Visibility,
+		WallCollisionQueryParams
+	);
+	
+	if (Hit && HitResult.GetActor()->ActorHasTag(TAG_WallRun.GetTag().GetTagName()))
+	{
+		return true;
+	}
+	
+	return false;
+}
+
 void UWallRunController::OnWallHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+                                   UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	//Only start Wall Running if we aren't already AND if the actor collided is tagged.
 	if (!IsWallRunning && MovementComponent->IsFalling() && OtherActor->ActorHasTag(TAG_WallRun.GetTag().GetTagName()))
