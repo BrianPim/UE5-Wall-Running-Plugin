@@ -40,6 +40,11 @@ void UWallRunController::TickComponent(float DeltaTime, ELevelTick TickType,
 		{
 			CancelWallRun();
 		}
+		else
+		{
+			//Setting the velocity of the Player's MoveComponent.
+			MovementComponent->Velocity = WallRunDirection * WallRunSpeed;
+		}
 	}
 }
 
@@ -72,8 +77,6 @@ void UWallRunController::SetupWallRunning()
 
 void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNormal)
 {
-	IsWallRunning = true;
-	
 	//Direction perpendicular to the normal of the wall crossing the Z axis.
 	FVector WallTangent = FVector::CrossProduct(FVector::UpVector, ImpactNormal).GetSafeNormal();
 	//PlayerCharacter approach vector.
@@ -91,6 +94,9 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 		WallTangent *= -1.0f;
 	}
 
+	//Caching WallTangent so we know which direction to move in during Wall Running.
+	WallRunDirection = WallTangent;
+
 	FVector ModifiedImpactPosition = FVector(ImpactPosition.X, ImpactPosition.Y, PlayerCharacter->GetActorLocation().Z);
 	FVector TargetLocation = ModifiedImpactPosition + ImpactNormal * DistanceToWallDuringRun;
 	FRotator TargetRotation = FRotationMatrix::MakeFromXZ(WallTangent, FVector::UpVector).Rotator();
@@ -99,7 +105,6 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 	
 	MovementComponent->StopMovementImmediately();
 	PlayerController->SetIgnoreMoveInput(true);
-	//MovementComponent->SetMovementMode(MOVE_Flying);
 	MovementComponent->GravityScale = WallRunGravityScale;
 	
 	PlayerCharacter->SetActorLocationAndRotation(
@@ -112,6 +117,8 @@ void UWallRunController::StartWallRun(FVector ImpactPosition, FVector ImpactNorm
 	//TODO Have two timers: one for running straight (Gravity Scale == 0), another for when we should start to fall (Gravity Scale > 0).
 	GetWorld()->GetTimerManager().SetTimer(EndWallRunTimerHandle, this, &UWallRunController::CancelWallRun,
 											WallRunDuration, false);
+
+	IsWallRunning = true;
 }
 
 void UWallRunController::CancelWallRun()

@@ -45,9 +45,14 @@ protected:
 private:
 
 	//Defaults
+	static constexpr float BaseWallRunSpeed = 300.0f;
 	static constexpr float BaseWallRunDuration = 1.5f;
 	static constexpr float BaseWallRunGravityScale = 0.1f;
 	static constexpr float BaseDistanceToWallDuringRun = 32.0f;
+
+	//Player Character's velocity while Wall Running.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
+	float WallRunSpeed = BaseWallRunSpeed;
 
 	//How long to Wall Run for before falling. Set to <= 0 to Wall Run indefinitely.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
@@ -86,4 +91,5 @@ private:
 	float PreviousGravityScale = 0;
 	
 	FTimerHandle EndWallRunTimerHandle;
+	FVector WallRunDirection = FVector::ZeroVector;
 };
