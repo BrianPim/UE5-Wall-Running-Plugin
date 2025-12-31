@@ -8,6 +8,7 @@
 
 class UCapsuleComponent;
 class UCharacterMovementComponent;
+class UInputAction;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class WALLRUNNINGPLUGIN_API UWallRunController : public UActorComponent
@@ -26,6 +27,10 @@ public:
 	UFUNCTION()
 	void OnWallHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
+	//Input Action to map to Jump. Can hook your existing IA into this.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Wall Running")
+	TObjectPtr<UInputAction> ActionJump = nullptr;
+	
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -72,9 +77,9 @@ private:
 	//Used to store a reference to the player's collision component, used for tracking Hit events.
 	UPROPERTY()
 	TObjectPtr<UCapsuleComponent> ColliderComponent = nullptr;
-	
-	//CollisionQueryParams that determine valid objects to consider in valid Wall Run target determination.
-	FCollisionQueryParams WallRunCollisionQueryParams;
+	//Used to store a reference to the InputComponent cast to an EnhancedInputComponent
+	UPROPERTY()
+	TObjectPtr<UEnhancedInputComponent> EnhancedInputComponent = nullptr;
 
 	bool IsWallRunning = false;
 

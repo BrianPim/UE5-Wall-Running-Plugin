@@ -3,6 +3,7 @@
 
 #include "WallRunController.h"
 
+#include "EnhancedInputComponent.h"
 #include "WallRunningLog.h"
 #include "WallRunningTags.h"
 #include "Components/CapsuleComponent.h"
@@ -35,7 +36,10 @@ void UWallRunController::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (IsWallRunning)
 	{
-		
+		if (MovementComponent->MovementMode != MOVE_Falling)
+		{
+			//CancelWallRun();
+		}
 	}
 }
 
@@ -52,6 +56,14 @@ void UWallRunController::SetupWallRunning()
 
 	ColliderComponent = PlayerCharacter->GetCapsuleComponent();
 	checkf(ColliderComponent, TEXT("Unable to get reference to the Player Character's CapsuleComponent"));
+
+	EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent);
+	checkf(EnhancedInputComponent, TEXT("Unable to get reference to the EnhancedInputComponent"));
+
+	if (ActionJump)
+	{
+		EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Triggered, this, &UWallRunController::CancelWallRun);
+	}
 
 	ColliderComponent->OnComponentHit.AddDynamic(
 		this,
@@ -109,8 +121,9 @@ void UWallRunController::CancelWallRun()
 		return;
 	}
 
-	//TODO Need to fix this so that we can set back to false without getting stuck on the wall.
-	//IsWallRunning = false;
+	GetWorld()->GetTimerManager().ClearTimer(EndWallRunTimerHandle);
+
+	IsWallRunning = false;
 
 	PlayerController->SetIgnoreMoveInput(false);
 	MovementComponent->GravityScale = PreviousGravityScale;
