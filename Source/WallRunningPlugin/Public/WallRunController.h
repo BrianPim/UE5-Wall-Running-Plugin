@@ -43,6 +43,8 @@ protected:
 
 	void CancelWallRun();
 
+	void JumpDuringWallRun();
+
 	void EnableGravity();
 
 	//Checks if the Player still has a wall to run along.
@@ -52,14 +54,23 @@ private:
 
 	//Defaults
 	static constexpr float BaseSpeed = 300.0f;
-	static constexpr float BaseDuration = 1.0f;
-	static constexpr float BaseEnableGravityAfter = 0.5f;
+	static constexpr float BaseVerticalJumpForce = 500.0f;
+	static constexpr float BaseHorizontalJumpForce = 500.0f;
+	static constexpr float BaseDuration = 1.25f;
+	static constexpr float BaseEnableGravityAfter = 0.75f;
 	static constexpr float BaseGravityScale = 0.5f;
-	static constexpr float BaseDistanceToWallDuringRun = 32.0f;
 
 	//Player Character's velocity while Wall Running.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
 	float Speed = BaseSpeed;
+
+	//Vertical force applied to the Player Character when they jump out of a Wall Run.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
+	float VerticalJumpForce = BaseVerticalJumpForce;
+
+	//Horizontal force applied to the Player Character when they jump out of a Wall Run.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))
+	float HorizontalJumpForce = BaseHorizontalJumpForce;
 
 	//How long to Wall Run for. Set to <= 0 to Wall Run indefinitely.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wall Running", meta = (AllowPrivateAccess = "true"))

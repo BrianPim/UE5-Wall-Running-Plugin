@@ -86,7 +86,7 @@ void UWallRunController::SetupWallRunning()
 
 	if (ActionJump)
 	{
-		EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Triggered, this, &UWallRunController::CancelWallRun);
+		EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Triggered, this, &UWallRunController::JumpDuringWallRun);
 	}
 
 	WallCollisionQueryParams.AddIgnoredActor(PlayerCharacter);
@@ -186,6 +186,22 @@ void UWallRunController::CancelWallRun()
 	MovementComponent->MaxAcceleration = PreviousMaxAcceleration;
 	MovementComponent->BrakingDecelerationFalling = PreviousBrakingDecelerationFalling;
 	MovementComponent->BrakingFrictionFactor = PreviousBrakingFrictionFactor;
+}
+
+void UWallRunController::JumpDuringWallRun()
+{
+	if (!IsWallRunning)
+	{
+		return;
+	}
+	
+	FVector VerticalForce = FVector::UpVector * VerticalJumpForce;
+	FVector HorizontalForce = PlayerCharacter->GetActorRightVector() * HorizontalJumpForce * (WallIsOnTheRight ? -1.0f : 1.0f);
+	
+	MovementComponent->Velocity = VerticalForce + HorizontalForce;
+	MovementComponent->SetMovementMode(MOVE_Falling);
+	
+	CancelWallRun();
 }
 
 void UWallRunController::EnableGravity()
